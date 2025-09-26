@@ -137,8 +137,14 @@ const displayLedgerState = async (
   } else {
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = !ledgerState.message.is_some ? 'none' : ledgerState.message.value;
+    const latestTitle = !ledgerState.title.is_some ? 'none' : ledgerState.title.value;
+    const latestGoal = ledgerState.goal;
+    const latestRaised = ledgerState.raised;
     logger.info(`Current state is: '${boardState}'`);
-    logger.info(`Current message is: '${latestMessage}'`);
+    logger.info(`Title: '${latestTitle}'`);
+    logger.info(`Message: '${latestMessage}'`);
+    logger.info(`Goal: ${latestGoal}`);
+    logger.info(`Raised: ${latestRaised}`);
     logger.info(`Current sequence is: ${ledgerState.sequence}`);
     logger.info(`Current owner is: '${toHex(ledgerState.owner)}'`);
   }
@@ -208,8 +214,11 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
       const choice = await rli.question(MAIN_LOOP_QUESTION);
       switch (choice) {
         case '1': {
+          const title = await rli.question(`What title do you want to post? `);
           const message = await rli.question(`What message do you want to post? `);
-          await bboardApi.post(message);
+          const goalStr = await rli.question(`What is the fundraising goal? `);
+          const goal = BigInt(goalStr);
+          await bboardApi.post(title, message, goal);
           break;
         }
         case '2':

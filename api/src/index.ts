@@ -49,7 +49,7 @@ export interface DeployedBBoardAPI {
   readonly deployedContractAddress: ContractAddress;
   readonly state$: Observable<BBoardDerivedState>;
 
-  post: (message: string) => Promise<void>;
+  post: (title: string, message: string, goal:bigint) => Promise<void>;
   takeDown: () => Promise<void>;
 }
 
@@ -137,10 +137,10 @@ export class BBoardAPI implements DeployedBBoardAPI {
    * @remarks
    * This method can fail during local circuit execution if the bulletin board is currently occupied.
    */
-  async post(message: string): Promise<void> {
-    this.logger?.info(`postingMessage: ${message}`);
+  async post(title: string, message: string,goal:bigint ): Promise<void> {
+    this.logger?.info(`postingTitle: ${title}, message: ${message}, goal: ${goal}`);
 
-    const txData = await this.deployedContract.callTx.post(message);
+    const txData = await this.deployedContract.callTx.post(title,message,goal);
 
     this.logger?.trace({
       transactionAdded: {
