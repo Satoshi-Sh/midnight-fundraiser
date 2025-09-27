@@ -139,7 +139,7 @@ const displayLedgerState = async (
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = !ledgerState.message.is_some ? 'none' : ledgerState.message.value;
     const latestTitle = !ledgerState.title.is_some ? 'none' : ledgerState.title.value;
-    const latestWalletAddress = !ledgerState.walletAddress.is_some ? 'none' : toHex(ledgerState.walletAddress.value);
+    const latestWalletAddress = !ledgerState.walletAddress.is_some ? 'none' : ledgerState.walletAddress.value;
 
     const latestGoal = ledgerState.goal;
     const latestRaised = ledgerState.raised;
@@ -229,7 +229,10 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           // Copy the hex bytes into a 32-byte array, padding with zeros if necessary
           walletBytes.set(hexBytes.slice(0, 32));
 
-          await bboardApi.post(title, message, goal, walletBytes);
+          logger.info(`Your wallet address is: ${walletState.address}`);
+          logger.info(`hexBytes: ${walletBytes.toString()}`);
+
+          await bboardApi.post(title, message, goal, walletState.address);
           break;
         }
         case '2':

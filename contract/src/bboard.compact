@@ -34,7 +34,7 @@ export ledger raised: Field;
 
 export ledger sequence: Counter;
 
-export ledger walletAddress: Maybe<Bytes<32>>;
+export ledger walletAddress: Maybe<Opaque<"string">>;
 
 export ledger owner: Bytes<32>;
 
@@ -43,7 +43,7 @@ constructor() {
   title = none<Opaque<"string">>();
   message = none<Opaque<"string">>();
   sequence.increment(1);
-  walletAddress = none<Bytes<32>>();
+  walletAddress = none<Opaque<"string">>();
 
   goal = 0;
   raised = 0;
@@ -55,7 +55,7 @@ export circuit post(
   newTitle: Opaque<"string">,
   newMessage: Opaque<"string">,
   newGoal: Field,
-  newWalletAddress: Bytes<32>
+  newWalletAddress: Opaque<"string">
   ): [] {
   assert(state == State.VACANT, "Attempted to post to an occupied board");
   title = disclose(some<Opaque<"string">>(newTitle));
@@ -63,7 +63,7 @@ export circuit post(
   message = disclose(some<Opaque<"string">>(newMessage));
   goal = disclose(newGoal);
   raised = disclose(0);
-  walletAddress = disclose(some<Bytes<32>>(newWalletAddress));
+  walletAddress = disclose(some<Opaque<"string">>(newWalletAddress));
   state = State.OCCUPIED;
 }
 

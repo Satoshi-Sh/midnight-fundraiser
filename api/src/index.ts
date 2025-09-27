@@ -23,7 +23,7 @@ import contractModule from '../../contract/src/managed/bboard/contract/index.cjs
 const { Contract, ledger, pureCircuits, State } = contractModule;
 // import { Contract, ledger, pureCircuits, State } from '../../contract/src/index';
 
-import { type ContractAddress, convert_bigint_to_Uint8Array, CompactTypeBytes } from '@midnight-ntwrk/compact-runtime';
+import { type ContractAddress, convert_bigint_to_Uint8Array } from '@midnight-ntwrk/compact-runtime';
 import { type Logger } from 'pino';
 import {
   type BBoardDerivedState,
@@ -49,7 +49,7 @@ export interface DeployedBBoardAPI {
   readonly deployedContractAddress: ContractAddress;
   readonly state$: Observable<BBoardDerivedState>;
 
-  post: (title: string, message: string, goal: bigint, walletAddress: Uint8Array) => Promise<void>;
+  post: (title: string, message: string, goal: bigint, walletAddress: string) => Promise<void>;
   takeDown: () => Promise<void>;
 }
 
@@ -132,13 +132,16 @@ export class BBoardAPI implements DeployedBBoardAPI {
   /**
    * Attempts to post a given message to the bulletin board.
    *
+   * @param title
    * @param message The message to post.
    *
+   * @param goal
+   * @param walletAddress
    * @remarks
    * This method can fail during local circuit execution if the bulletin board is currently occupied.
    */
-  async post(title: string, message: string, goal: bigint, walletAddress: Uint8Array): Promise<void> {
-    this.logger?.info(`posting: Title: ${title}, message: ${message}, goal: ${goal}, wallet: ${toHex(walletAddress)}`);
+  async post(title: string, message: string, goal: bigint, walletAddress: string): Promise<void> {
+    this.logger?.info(`posting: Title: ${title}, message: ${message}, goal: ${goal}, wallet: ${walletAddress}`);
 
     const txData = await this.deployedContract.callTx.post(title, message, goal, walletAddress);
 
