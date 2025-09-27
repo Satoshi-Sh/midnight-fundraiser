@@ -150,7 +150,7 @@ const displayLedgerState = async (
     logger.info(`Raised: ${latestRaised}`);
     logger.info(`Current sequence is: ${ledgerState.sequence}`);
     logger.info(`Current owner is: '${toHex(ledgerState.owner)}'`);
-    logger.info(`Current owner is: '${latestWalletAddress}'`);
+    logger.info(`Wallet Address is: '${latestWalletAddress}'`);
   }
 };
 
@@ -223,14 +223,6 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           const goalStr = await rli.question(`What is the fundraising goal? `);
           const goal = BigInt(goalStr);
           const walletState = await Rx.firstValueFrom(wallet.state());
-          const walletBytes = new Uint8Array(32);
-          const hexBytes = fromHex(walletState.address);
-
-          // Copy the hex bytes into a 32-byte array, padding with zeros if necessary
-          walletBytes.set(hexBytes.slice(0, 32));
-
-          logger.info(`Your wallet address is: ${walletState.address}`);
-          logger.info(`hexBytes: ${walletBytes.toString()}`);
 
           await bboardApi.post(title, message, goal, walletState.address);
           break;
