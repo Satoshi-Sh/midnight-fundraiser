@@ -139,6 +139,8 @@ const displayLedgerState = async (
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = !ledgerState.message.is_some ? 'none' : ledgerState.message.value;
     const latestTitle = !ledgerState.title.is_some ? 'none' : ledgerState.title.value;
+    const latestWalletAddress = !ledgerState.walletAddress.is_some ? 'none' : toHex(ledgerState.walletAddress.value);
+
     const latestGoal = ledgerState.goal;
     const latestRaised = ledgerState.raised;
     logger.info(`Current state is: '${boardState}'`);
@@ -148,6 +150,7 @@ const displayLedgerState = async (
     logger.info(`Raised: ${latestRaised}`);
     logger.info(`Current sequence is: ${ledgerState.sequence}`);
     logger.info(`Current owner is: '${toHex(ledgerState.owner)}'`);
+    logger.info(`Current owner is: '${latestWalletAddress}'`);
   }
 };
 
@@ -220,7 +223,11 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           const goalStr = await rli.question(`What is the fundraising goal? `);
           const goal = BigInt(goalStr);
           const walletState = await Rx.firstValueFrom(wallet.state());
-          const walletBytes = Uint8Array.from(fromHex(walletState.address));
+          const walletBytes = new Uint8Array(32);
+          const hexBytes = fromHex(walletState.address);
+
+          // Copy the hex bytes into a 32-byte array, padding with zeros if necessary
+          walletBytes.set(hexBytes.slice(0, 32));
 
           await bboardApi.post(title, message, goal, walletBytes);
           break;
