@@ -25,6 +25,7 @@ const { Contract, ledger, pureCircuits, State } = contractModule;
 
 import { type ContractAddress, convert_bigint_to_Uint8Array } from '@midnight-ntwrk/compact-runtime';
 import { type Logger } from 'pino';
+
 import {
   type BBoardDerivedState,
   type BBoardContract,
@@ -38,6 +39,8 @@ import * as utils from './utils/index.js';
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
 import { combineLatest, map, tap, from, type Observable } from 'rxjs';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
+import type { Wallet } from '@midnight-ntwrk/wallet-api';
+import { NetworkId, nativeToken } from '@midnight-ntwrk/zswap';
 
 /** @internal */
 const bboardContractInstance: BBoardContract = new Contract(witnesses);
@@ -49,7 +52,7 @@ export interface DeployedBBoardAPI {
   readonly deployedContractAddress: ContractAddress;
   readonly state$: Observable<BBoardDerivedState>;
 
-  post: (message: string) => Promise<void>;
+  post: (title: string, message: string, goal: bigint, walletAddress: string) => Promise<void>;
   takeDown: () => Promise<void>;
 }
 
@@ -74,7 +77,7 @@ export class BBoardAPI implements DeployedBBoardAPI {
   /** @internal */
   private constructor(
     public readonly deployedContract: DeployedBBoardContract,
-    providers: BBoardProviders,
+    private providers: BBoardProviders,
     private readonly logger?: Logger,
   ) {
     this.deployedContractAddress = deployedContract.deployTxData.public.contractAddress;
@@ -132,15 +135,18 @@ export class BBoardAPI implements DeployedBBoardAPI {
   /**
    * Attempts to post a given message to the bulletin board.
    *
+   * @param title
    * @param message The message to post.
    *
+   * @param goal
+   * @param walletAddress
    * @remarks
    * This method can fail during local circuit execution if the bulletin board is currently occupied.
    */
-  async post(message: string): Promise<void> {
-    this.logger?.info(`postingMessage: ${message}`);
+  async post(title: string, message: string, goal: bigint, walletAddress: string): Promise<void> {
+    this.logger?.info(`posting: Title: ${title}, message: ${message}, goal: ${goal}, wallet: ${walletAddress}`);
 
-    const txData = await this.deployedContract.callTx.post(message);
+    const txData = await this.deployedContract.callTx.post(title, message, goal, walletAddress);
 
     this.logger?.trace({
       transactionAdded: {
@@ -160,7 +166,7 @@ export class BBoardAPI implements DeployedBBoardAPI {
    * state.
    */
   async takeDown(): Promise<void> {
-    this.logger?.info('takingDownMessage');
+    this.logger?.info('takingDownCampaign');
 
     const txData = await this.deployedContract.callTx.takeDown();
 
@@ -230,6 +236,34 @@ export class BBoardAPI implements DeployedBBoardAPI {
     });
 
     return new BBoardAPI(deployedBBoardContract, providers, logger);
+  }
+
+  /**
+   * Sends a contribution to the current campaign and updates the contract state.
+   *
+   * @param wallet The wallet that will send the tokens.
+   * @param amount The amount (in native token) to contribute.
+   */
+  async contributeWithWallet(wallet: Wallet, amount: bigint): Promise<void> {
+    // // 1. Get the current ledger state
+    const contractState = await this.providers.publicDataProvider.queryContractState(this.deployedContractAddress);
+    if (!contractState) {
+      throw new Error('Cannot fetch contract state');
+    }
+
+    const ledgerState = ledger(contractState.data);
+    this.logger?.info({ ledgerState: ledgerState });
+    // if (!ledgerState) throw new Error('Cannot fetch ledger state');
+    // const ledgerData = ledger(ledgerState.data);
+    // if (!ledgerData.walletAddress?.is_some) throw new Error('Campaign wallet address is not set');
+    const receiverAddress: string = ledgerState.walletAddress.value;
+    this.logger?.info(`Receiver Address ${receiverAddress}`);
+    // // 2. Transfer tokens from wallet
+    const transferRecipe = await wallet.transferTransaction([{ amount, type: nativeToken(), receiverAddress }]);
+    const provenTx = await wallet.proveTransaction(transferRecipe);
+    await wallet.submitTransaction(provenTx);
+    // // 3. Call the contract circuit to update raised amount
+    await this.deployedContract.callTx.contribute(amount);
   }
 
   private static async getPrivateState(providers: BBoardProviders): Promise<BBoardPrivateState> {

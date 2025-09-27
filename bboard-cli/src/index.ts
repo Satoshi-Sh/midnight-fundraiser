@@ -92,8 +92,8 @@ export const getBBoardLedgerState = async (
 
 const DEPLOY_OR_JOIN_QUESTION = `
 You can do one of the following:
-  1. Deploy a new bulletin board contract
-  2. Join an existing bulletin board contract
+  1. Deploy a new Fundraising Campaing contract
+  2. Join an existing Fundraising contract
   3. Exit
 Which would you like to do? `;
 
@@ -133,14 +133,23 @@ const displayLedgerState = async (
   const contractAddress = deployedBBoardContract.deployTxData.public.contractAddress;
   const ledgerState = await getBBoardLedgerState(providers, contractAddress);
   if (ledgerState === null) {
-    logger.info(`There is no bulletin board contract deployed at ${contractAddress}`);
+    logger.info(`There is no Fundraising contract deployed at ${contractAddress}`);
   } else {
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = !ledgerState.message.is_some ? 'none' : ledgerState.message.value;
+    const latestTitle = !ledgerState.title.is_some ? 'none' : ledgerState.title.value;
+    const latestWalletAddress = !ledgerState.walletAddress.is_some ? 'none' : ledgerState.walletAddress.value;
+
+    const latestGoal = ledgerState.goal;
+    const latestRaised = ledgerState.raised;
     logger.info(`Current state is: '${boardState}'`);
-    logger.info(`Current message is: '${latestMessage}'`);
+    logger.info(`Title: '${latestTitle}'`);
+    logger.info(`Message: '${latestMessage}'`);
+    logger.info(`Goal: ${latestGoal}`);
+    logger.info(`Raised: ${latestRaised}`);
     logger.info(`Current sequence is: ${ledgerState.sequence}`);
     logger.info(`Current owner is: '${toHex(ledgerState.owner)}'`);
+    logger.info(`Wallet Address is: '${latestWalletAddress}'`);
   }
 };
 
@@ -151,7 +160,7 @@ const displayLedgerState = async (
 const displayPrivateState = async (providers: BBoardProviders, logger: Logger): Promise<void> => {
   const privateState = await providers.privateStateProvider.get(bboardPrivateStateKey);
   if (privateState === null) {
-    logger.info(`There is no existing bulletin board private state`);
+    logger.info(`There is no existing Fundraising Campaign board private state`);
   } else {
     logger.info(`Current secret key is: ${toHex(privateState.secretKey)}`);
   }
@@ -166,7 +175,7 @@ const displayPrivateState = async (providers: BBoardProviders, logger: Logger): 
 
 const displayDerivedState = (ledgerState: BBoardDerivedState | undefined, logger: Logger) => {
   if (ledgerState === undefined) {
-    logger.info(`No bulletin board state currently available`);
+    logger.info(`No Fundraising Campaingn board state currently available`);
   } else {
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = ledgerState.state === State.OCCUPIED ? ledgerState.message : 'none';
@@ -185,15 +194,14 @@ const displayDerivedState = (ledgerState: BBoardDerivedState | undefined, logger
 
 const MAIN_LOOP_QUESTION = `
 You can do one of the following:
-  1. Post a message
-  2. Take down your message
-  3. Display the current ledger state (known by everyone)
-  4. Display the current private state (known only to this DApp instance)
-  5. Display the current derived state (known only to this DApp instance)
-  6. Exit
+  1. Create a Fundraising Campaign
+  2. Take down your Campaign
+  3. Display the Campaign Info
+  4. Contribute to the Campaing
+  5. Exit
 Which would you like to do? `;
 
-const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logger): Promise<void> => {
+const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logger, wallet: Wallet): Promise<void> => {
   const bboardApi = await deployOrJoin(providers, rli, logger);
   if (bboardApi === null) {
     return;
@@ -208,8 +216,13 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
       const choice = await rli.question(MAIN_LOOP_QUESTION);
       switch (choice) {
         case '1': {
+          const title = await rli.question(`What title do you want to post? `);
           const message = await rli.question(`What message do you want to post? `);
-          await bboardApi.post(message);
+          const goalStr = await rli.question(`What is the fundraising goal? `);
+          const goal = BigInt(goalStr);
+          const walletState = await Rx.firstValueFrom(wallet.state());
+
+          await bboardApi.post(title, message, goal, walletState.address);
           break;
         }
         case '2':
@@ -219,12 +232,14 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           await displayLedgerState(providers, bboardApi.deployedContract, logger);
           break;
         case '4':
-          await displayPrivateState(providers, logger);
+          const amountStr = await rli.question('Enter amount to contribute: ');
+          const amount = BigInt(amountStr);
+
+          await bboardApi.contributeWithWallet(wallet, amount);
+          console.log(`Contributed ${amount} tokens to the campaign.`);
+          logger.info('Exiting...');
           break;
         case '5':
-          displayDerivedState(currentState, logger);
-          break;
-        case '6':
           logger.info('Exiting...');
           return;
         default:
@@ -421,7 +436,7 @@ export const run = async (config: Config, logger: Logger, dockerEnv?: DockerComp
         walletProvider: walletAndMidnightProvider,
         midnightProvider: walletAndMidnightProvider,
       };
-      await mainLoop(providers, rli, logger);
+      await mainLoop(providers, rli, logger, wallet);
     }
   } catch (e) {
     logError(logger, e);
