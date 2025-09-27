@@ -57,8 +57,9 @@ import { type Config, StandaloneConfig } from './config.js';
 import type { StartedDockerComposeEnvironment, DockerComposeEnvironment } from 'testcontainers';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { type ContractAddress } from '@midnight-ntwrk/compact-runtime';
-import { toHex, assertIsContractAddress } from '@midnight-ntwrk/midnight-js-utils';
+import { toHex, assertIsContractAddress, fromHex } from '@midnight-ntwrk/midnight-js-utils';
 import { getLedgerNetworkId, getZswapNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { CompactTypeBytes } from '@midnight-ntwrk/compact-runtime';
 
 // @ts-expect-error: It's needed to enable WebSocket usage through apollo
 globalThis.WebSocket = WebSocket;
@@ -199,7 +200,7 @@ You can do one of the following:
   6. Exit
 Which would you like to do? `;
 
-const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logger): Promise<void> => {
+const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logger, wallet: Wallet): Promise<void> => {
   const bboardApi = await deployOrJoin(providers, rli, logger);
   if (bboardApi === null) {
     return;
@@ -218,7 +219,10 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           const message = await rli.question(`What message do you want to post? `);
           const goalStr = await rli.question(`What is the fundraising goal? `);
           const goal = BigInt(goalStr);
-          await bboardApi.post(title, message, goal);
+          const walletState = await Rx.firstValueFrom(wallet.state());
+          const walletBytes = Uint8Array.from(fromHex(walletState.address));
+
+          await bboardApi.post(title, message, goal, walletBytes);
           break;
         }
         case '2':
@@ -430,7 +434,7 @@ export const run = async (config: Config, logger: Logger, dockerEnv?: DockerComp
         walletProvider: walletAndMidnightProvider,
         midnightProvider: walletAndMidnightProvider,
       };
-      await mainLoop(providers, rli, logger);
+      await mainLoop(providers, rli, logger, wallet);
     }
   } catch (e) {
     logError(logger, e);
