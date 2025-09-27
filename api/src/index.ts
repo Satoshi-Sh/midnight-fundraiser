@@ -77,7 +77,7 @@ export class BBoardAPI implements DeployedBBoardAPI {
   /** @internal */
   private constructor(
     public readonly deployedContract: DeployedBBoardContract,
-    providers: BBoardProviders,
+    private providers: BBoardProviders,
     private readonly logger?: Logger,
   ) {
     this.deployedContractAddress = deployedContract.deployTxData.public.contractAddress;
@@ -244,29 +244,27 @@ export class BBoardAPI implements DeployedBBoardAPI {
    * @param wallet The wallet that will send the tokens.
    * @param amount The amount (in native token) to contribute.
    */
-  // async contributeWithWallet(wallet: Wallet, amount: bigint): Promise<void> {
-  //   // 1. Get the current ledger state
-  //   const ledgerState = await this.deployedContract.providers.publicDataProvider.queryContractState(
-  //     this.deployedContractAddress,
-  //   );
+  async contributeWithWallet(wallet: Wallet, amount: bigint): Promise<void> {
+    // // 1. Get the current ledger state
+    const contractState = await this.providers.publicDataProvider.queryContractState(this.deployedContractAddress);
+    if (!contractState) {
+      throw new Error('Cannot fetch contract state');
+    }
 
-  //   if (!ledgerState) throw new Error('Cannot fetch ledger state');
-
-  //   const ledgerData = ledger(ledgerState.data);
-
-  //   if (!ledgerData.walletAddress?.is_some) throw new Error('Campaign wallet address is not set');
-
-  //   const receiverAddress: string = ledgerData.walletAddress.value;
-  //   this.logger?.info(`Receiver Address ${receiverAddress}`);
-  //   // 2. Transfer tokens from wallet
-  //   const transferRecipe = await wallet.transferTransaction([{ amount, type: nativeToken(), receiverAddress }]);
-
-  //   const provenTx = await wallet.proveTransaction(transferRecipe);
-  //   await wallet.submitTransaction(provenTx);
-
-  //   // 3. Call the contract circuit to update raised amount
-  //   await this.deployedContract.callTx.contribute(amount);
-  // }
+    const ledgerState = ledger(contractState.data);
+    this.logger?.info({ ledgerState: ledgerState });
+    // if (!ledgerState) throw new Error('Cannot fetch ledger state');
+    // const ledgerData = ledger(ledgerState.data);
+    // if (!ledgerData.walletAddress?.is_some) throw new Error('Campaign wallet address is not set');
+    const receiverAddress: string = ledgerState.walletAddress.value;
+    this.logger?.info(`Receiver Address ${receiverAddress}`);
+    // // 2. Transfer tokens from wallet
+    const transferRecipe = await wallet.transferTransaction([{ amount, type: nativeToken(), receiverAddress }]);
+    const provenTx = await wallet.proveTransaction(transferRecipe);
+    await wallet.submitTransaction(provenTx);
+    // // 3. Call the contract circuit to update raised amount
+    await this.deployedContract.callTx.contribute(amount);
+  }
 
   private static async getPrivateState(providers: BBoardProviders): Promise<BBoardPrivateState> {
     const existingPrivateState = await providers.privateStateProvider.get(bboardPrivateStateKey);

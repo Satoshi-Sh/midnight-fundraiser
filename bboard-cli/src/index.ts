@@ -232,11 +232,11 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           await displayLedgerState(providers, bboardApi.deployedContract, logger);
           break;
         case '4':
-          // const amountStr = await rli.question('Enter amount to contribute: ');
-          // const amount = BigInt(amountStr);
+          const amountStr = await rli.question('Enter amount to contribute: ');
+          const amount = BigInt(amountStr);
 
-          //await bboardApi.contributeWithWallet(wallet, amount);
-          // console.log(`Contributed ${amount} tokens to the campaign.`);
+          await bboardApi.contributeWithWallet(wallet, amount);
+          console.log(`Contributed ${amount} tokens to the campaign.`);
           logger.info('Exiting...');
           break;
         case '5':
