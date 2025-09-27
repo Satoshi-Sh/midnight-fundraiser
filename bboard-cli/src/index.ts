@@ -57,9 +57,8 @@ import { type Config, StandaloneConfig } from './config.js';
 import type { StartedDockerComposeEnvironment, DockerComposeEnvironment } from 'testcontainers';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { type ContractAddress } from '@midnight-ntwrk/compact-runtime';
-import { toHex, assertIsContractAddress, fromHex } from '@midnight-ntwrk/midnight-js-utils';
+import { toHex, assertIsContractAddress } from '@midnight-ntwrk/midnight-js-utils';
 import { getLedgerNetworkId, getZswapNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
-import { CompactTypeBytes } from '@midnight-ntwrk/compact-runtime';
 
 // @ts-expect-error: It's needed to enable WebSocket usage through apollo
 globalThis.WebSocket = WebSocket;
@@ -93,8 +92,8 @@ export const getBBoardLedgerState = async (
 
 const DEPLOY_OR_JOIN_QUESTION = `
 You can do one of the following:
-  1. Deploy a new bulletin board contract
-  2. Join an existing bulletin board contract
+  1. Deploy a new Fundraising Campaing contract
+  2. Join an existing Fundraising contract
   3. Exit
 Which would you like to do? `;
 
@@ -134,7 +133,7 @@ const displayLedgerState = async (
   const contractAddress = deployedBBoardContract.deployTxData.public.contractAddress;
   const ledgerState = await getBBoardLedgerState(providers, contractAddress);
   if (ledgerState === null) {
-    logger.info(`There is no bulletin board contract deployed at ${contractAddress}`);
+    logger.info(`There is no Fundraising contract deployed at ${contractAddress}`);
   } else {
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = !ledgerState.message.is_some ? 'none' : ledgerState.message.value;
@@ -161,7 +160,7 @@ const displayLedgerState = async (
 const displayPrivateState = async (providers: BBoardProviders, logger: Logger): Promise<void> => {
   const privateState = await providers.privateStateProvider.get(bboardPrivateStateKey);
   if (privateState === null) {
-    logger.info(`There is no existing bulletin board private state`);
+    logger.info(`There is no existing Fundraising Campaign board private state`);
   } else {
     logger.info(`Current secret key is: ${toHex(privateState.secretKey)}`);
   }
@@ -176,7 +175,7 @@ const displayPrivateState = async (providers: BBoardProviders, logger: Logger): 
 
 const displayDerivedState = (ledgerState: BBoardDerivedState | undefined, logger: Logger) => {
   if (ledgerState === undefined) {
-    logger.info(`No bulletin board state currently available`);
+    logger.info(`No Fundraising Campaingn board state currently available`);
   } else {
     const boardState = ledgerState.state === State.OCCUPIED ? 'occupied' : 'vacant';
     const latestMessage = ledgerState.state === State.OCCUPIED ? ledgerState.message : 'none';
@@ -195,12 +194,11 @@ const displayDerivedState = (ledgerState: BBoardDerivedState | undefined, logger
 
 const MAIN_LOOP_QUESTION = `
 You can do one of the following:
-  1. Post a message
-  2. Take down your message
-  3. Display the current ledger state (known by everyone)
-  4. Display the current private state (known only to this DApp instance)
-  5. Display the current derived state (known only to this DApp instance)
-  6. Exit
+  1. Create a Fundraising Campaign
+  2. Take down your Campaign
+  3. Display the Campaign Info
+  4. Contribute to the Campaing
+  5. Exit
 Which would you like to do? `;
 
 const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logger, wallet: Wallet): Promise<void> => {
@@ -234,12 +232,14 @@ const mainLoop = async (providers: BBoardProviders, rli: Interface, logger: Logg
           await displayLedgerState(providers, bboardApi.deployedContract, logger);
           break;
         case '4':
-          await displayPrivateState(providers, logger);
+          // const amountStr = await rli.question('Enter amount to contribute: ');
+          // const amount = BigInt(amountStr);
+
+          //await bboardApi.contributeWithWallet(wallet, amount);
+          // console.log(`Contributed ${amount} tokens to the campaign.`);
+          logger.info('Exiting...');
           break;
         case '5':
-          displayDerivedState(currentState, logger);
-          break;
-        case '6':
           logger.info('Exiting...');
           return;
         default:
