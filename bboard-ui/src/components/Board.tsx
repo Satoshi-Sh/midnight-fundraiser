@@ -68,6 +68,8 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [boardState, setBoardState] = useState<BBoardDerivedState>();
   const [messagePrompt, setMessagePrompt] = useState<string>();
+  const [titlePrompt, setTitlePrompt] = useState<string>();
+  const [goalPrompt, setGoalPrompt] = useState<string>();
   const [isWorking, setIsWorking] = useState(!!boardDeployment$);
 
   // Two simple callbacks that call `resolve(...)` to either deploy or join a bulletin board
@@ -83,17 +85,23 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   // state, and we just need to forward it to the `post` method of the `DeployedBBoardAPI` instance
   // that we received in the `deployedBoardAPI` state.
   const onPostMessage = useCallback(async () => {
-    if (!messagePrompt) {
+    if (!titlePrompt || !messagePrompt || !goalPrompt) {
+      setErrorMessage('Please fill in all fields (title, goal, and message)');
       return;
     }
 
+    const goalInput = goalPrompt?.trim();
+    if (!goalInput || !/^\d+$/.test(goalInput)) {
+      setErrorMessage('Please enter a valid positive integer for the funding goal');
+      return;
+    }
     try {
       if (deployedBoardAPI) {
         setIsWorking(true);
         await deployedBoardAPI.post(
-          'test_title',
+          titlePrompt,
           messagePrompt,
-          BigInt(10),
+          BigInt(goalInput),
           'mn_shield-addr_test1arezwcd4dpx77vdgvrvlf9t8fjtxmhh46928slvqjsrp4caq6yfsxqxv2ux0w0lmj7u7f5asu2aytre9cp8l68597ewr0suaf6eyl9rn5vea0gcf',
         );
       }
@@ -168,7 +176,7 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   }, [boardDeployment, setIsWorking, setErrorMessage, setDeployedBoardAPI]);
 
   return (
-    <Card sx={{ position: 'relative', width: 275, height: 300, minWidth: 275, minHeight: 300 }} color="primary">
+    <Card sx={{ position: 'relative', width: 400, minWidth: 400, p: 2 }} color="primary">
       {!boardDeployment$ && (
         <EmptyCardContent onCreateBoardCallback={onCreateBoard} onJoinBoardCallback={onJoinBoard} />
       )}
@@ -217,27 +225,58 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
           <CardContent>
             {boardState ? (
               boardState.state === State.OCCUPIED ? (
-                <Typography data-testid="board-posted-message" minHeight={160} color="primary">
-                  {boardState.message}
-                </Typography>
+                <>
+                  <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold">
+                    {boardState.title}
+                  </Typography>
+                  <Typography data-testid="board-campaign-goal" variant="body2" color="textSecondary">
+                    Goal: {boardState.goal}
+                  </Typography>
+                  <Typography data-testid="board-posted-message" minHeight={160} color="primary">
+                    {boardState.message}
+                  </Typography>
+                </>
               ) : (
-                <TextField
-                  id="message-prompt"
-                  data-testid="board-message-prompt"
-                  variant="outlined"
-                  focused
-                  fullWidth
-                  multiline
-                  minRows={6}
-                  maxRows={6}
-                  placeholder="Message to post"
-                  size="small"
-                  color="primary"
-                  inputProps={{ style: { color: 'black' } }}
-                  onChange={(e) => {
-                    setMessagePrompt(e.target.value);
-                  }}
-                />
+                <>
+                  <TextField
+                    id="title-prompt"
+                    label="Campaign Title"
+                    placeholder="Enter campaign title"
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                    value={titlePrompt ?? ''}
+                    onChange={(e) => setTitlePrompt(e.target.value)}
+                  />
+
+                  <TextField
+                    id="goal-prompt"
+                    placeholder="Enter funding goal amount"
+                    label="Funding Goal"
+                    type="number"
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                    value={goalPrompt ?? ''}
+                    onChange={(e) => setGoalPrompt(e.target.value)}
+                  />
+
+                  <TextField
+                    id="message-prompt"
+                    label="Campaign Message"
+                    placeholder="Enter campain message"
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    maxRows={6}
+                    size="small"
+                    value={messagePrompt ?? ''}
+                    onChange={(e) => setMessagePrompt(e.target.value)}
+                  />
+                </>
               )
             ) : (
               <Skeleton variant="rectangular" width={245} height={160} />
