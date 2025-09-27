@@ -90,7 +90,12 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
     try {
       if (deployedBoardAPI) {
         setIsWorking(true);
-        await deployedBoardAPI.post(messagePrompt);
+        await deployedBoardAPI.post(
+          'test_title',
+          messagePrompt,
+          BigInt(10),
+          'mn_shield-addr_test1arezwcd4dpx77vdgvrvlf9t8fjtxmhh46928slvqjsrp4caq6yfsxqxv2ux0w0lmj7u7f5asu2aytre9cp8l68597ewr0suaf6eyl9rn5vea0gcf',
+        );
       }
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
