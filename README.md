@@ -20,7 +20,3 @@ Note: if installing via npm, you need to pass `--legacy-peer-deps` because of th
 1. Install the node modules in `contract` and compile it
 1. Install the node modules in `bboard-ui`
 1. Run `npm run build:start` to build the project and run a local server
-
-## Background 
-
-This application has been made out of Midnight Tutorial application 
