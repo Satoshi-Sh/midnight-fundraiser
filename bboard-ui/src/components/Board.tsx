@@ -46,6 +46,17 @@ export interface BoardProps {
   boardDeployment$?: Observable<BoardDeployment>;
 }
 
+function useContractAddress() {
+  const [addr, setAddr] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setAddr(params.get('contractAddress'));
+  }, []);
+
+  return addr;
+}
+
 /**
  * Provides the UI for a deployed bulletin board contract; allowing messages to be posted or removed
  * following the rules enforced by the underlying Compact contract.
@@ -129,7 +140,9 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
 
   const onCopyContractAddress = useCallback(async () => {
     if (deployedBoardAPI) {
-      await navigator.clipboard.writeText(deployedBoardAPI.deployedContractAddress);
+      const baseUrl = window.location.origin + window.location.pathname;
+      const urlWithContract = `${baseUrl}?contractAddress=${deployedBoardAPI.deployedContractAddress}`;
+      await navigator.clipboard.writeText(urlWithContract);
     }
   }, [deployedBoardAPI]);
 
@@ -174,6 +187,14 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
       subscription.unsubscribe();
     };
   }, [boardDeployment, setIsWorking, setErrorMessage, setDeployedBoardAPI]);
+  const contractAddress = useContractAddress();
+  useEffect(() => {
+    // If we have a contractAddress from URL but no active deployment, auto-join
+    if (contractAddress && !boardDeployment$ && !boardDeployment) {
+      console.log('Auto-joining contract:', contractAddress);
+      onJoinBoard(contractAddress);
+    }
+  }, [contractAddress, boardDeployment$, boardDeployment, onJoinBoard]);
 
   return (
     <Card sx={{ position: 'relative', width: 400, minWidth: 400, p: 2 }} color="primary">
@@ -214,7 +235,7 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
             title={toShortFormatContractAddress(deployedBoardAPI?.deployedContractAddress) ?? 'Loading...'}
             action={
               deployedBoardAPI?.deployedContractAddress ? (
-                <IconButton title="Copy contract address" onClick={onCopyContractAddress}>
+                <IconButton title="Copy share Link" onClick={onCopyContractAddress}>
                   <CopyIcon fontSize="small" />
                 </IconButton>
               ) : (
