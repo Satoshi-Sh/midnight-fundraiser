@@ -40,7 +40,6 @@ import { type Observable } from 'rxjs';
 import { State } from '../../../contract/src/index';
 import { EmptyCardContent } from './Board.EmptyCardContent';
 
-
 /** The props required by the {@link Board} component. */
 export interface BoardProps {
   /** The observable bulletin board deployment. */
@@ -82,7 +81,6 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
     [boardApiProvider],
   );
 
-
   // Callback to handle the posting of a message. The message text is captured in the `messagePrompt`
   // state, and we just need to forward it to the `post` method of the `DeployedBBoardAPI` instance
   // that we received in the `deployedBoardAPI` state.
@@ -99,19 +97,13 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
     }
     try {
       if (deployedBoardAPI) {
+        const walletState = await boardApiProvider.getWalletAddress();
+        const walletAddress = walletState.address;
 
-          const walletState = await boardApiProvider.getWalletAddress()
-          const walletAddress = walletState.address
-
-          console.log("get wallet address", walletState, walletAddress)
+        console.log('get wallet address', walletState, walletAddress);
 
         setIsWorking(true);
-        await deployedBoardAPI.post(
-          titlePrompt,
-          messagePrompt,
-          BigInt(goalInput),
-          walletAddress
-        );
+        await deployedBoardAPI.post(titlePrompt, messagePrompt, BigInt(goalInput), walletAddress);
       }
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
@@ -245,7 +237,7 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
                     Funding Goal
                   </Typography>
                   <Typography data-testid="board-campaign-goal" variant="body2" color="primary">
-                    boardState.goal
+                    {boardState.goal}
                   </Typography>
 
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
