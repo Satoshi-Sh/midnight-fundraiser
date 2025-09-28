@@ -31,6 +31,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import WriteIcon from '@mui/icons-material/EditNoteOutlined';
+import SendTimeExtensionIcon from '@mui/icons-material/SendTimeExtensionOutlined';
 import CopyIcon from '@mui/icons-material/ContentPasteOutlined';
 import StopIcon from '@mui/icons-material/HighlightOffOutlined';
 import { type BBoardDerivedState, type DeployedBBoardAPI } from '../../../api/src/index';
@@ -39,11 +40,24 @@ import { type BoardDeployment } from '../contexts';
 import { type Observable } from 'rxjs';
 import { State } from '../../../contract/src/index';
 import { EmptyCardContent } from './Board.EmptyCardContent';
+import { WalletBuilder } from '@midnight-ntwrk/wallet';
+import { NetworkId } from '@midnight-ntwrk/zswap';
 
 /** The props required by the {@link Board} component. */
 export interface BoardProps {
   /** The observable bulletin board deployment. */
   boardDeployment$?: Observable<BoardDeployment>;
+}
+
+function useContractAddress() {
+  const [addr, setAddr] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setAddr(params.get('contractAddress'));
+  }, []);
+
+  return addr;
 }
 
 /**
@@ -68,6 +82,8 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [boardState, setBoardState] = useState<BBoardDerivedState>();
   const [messagePrompt, setMessagePrompt] = useState<string>();
+  const [titlePrompt, setTitlePrompt] = useState<string>();
+  const [goalPrompt, setGoalPrompt] = useState<string>();
   const [isWorking, setIsWorking] = useState(!!boardDeployment$);
 
   // Two simple callbacks that call `resolve(...)` to either deploy or join a bulletin board
@@ -83,20 +99,52 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   // state, and we just need to forward it to the `post` method of the `DeployedBBoardAPI` instance
   // that we received in the `deployedBoardAPI` state.
   const onPostMessage = useCallback(async () => {
-    if (!messagePrompt) {
+    if (!titlePrompt || !messagePrompt || !goalPrompt) {
+      setErrorMessage('Please fill in all fields (title, goal, and message)');
       return;
     }
 
+    const goalInput = goalPrompt?.trim();
+    if (!goalInput || !/^\d+$/.test(goalInput)) {
+      setErrorMessage('Please enter a valid positive integer for the funding goal');
+      return;
+    }
     try {
       if (deployedBoardAPI) {
+        const walletState = await boardApiProvider.getWalletAddress();
+        const walletAddress = walletState.address;
+
+        console.log('get wallet address', walletState, walletAddress);
+
         setIsWorking(true);
-        await deployedBoardAPI.post(messagePrompt);
+        await deployedBoardAPI.post(titlePrompt, messagePrompt, BigInt(goalInput), walletAddress);
       }
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setIsWorking(false);
     }
+  }, [deployedBoardAPI, setErrorMessage, setIsWorking, messagePrompt]);
+
+  const onSendToken = useCallback(async () => {
+    // try {
+    //   if (deployedBoardAPI) {
+    //     const wallet = await WalletBuilder.build(
+    //       'https://indexer.testnet-02.midnight.network/api/v1/graphql',
+    //       'wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws',
+    //       'http://localhost:6300',
+    //       'https://rpc.testnet-02.midnight.network',
+    //       '0000000000000000000000000000000000000000000000000000000000000000',
+    //       NetworkId.TestNet,
+    //     );
+    //     wallet.start();
+    //     await deployedBoardAPI.contributeWithWallet(wallet, BigInt(1));
+    //   }
+    // } catch (error: unknown) {
+    //   setErrorMessage(error instanceof Error ? error.message : String(error));
+    // } finally {
+    //   setIsWorking(false);
+    // }
   }, [deployedBoardAPI, setErrorMessage, setIsWorking, messagePrompt]);
 
   // Callback to handle the taking down of a message. Again, we simply invoke the `takeDown` method
@@ -116,7 +164,9 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
 
   const onCopyContractAddress = useCallback(async () => {
     if (deployedBoardAPI) {
-      await navigator.clipboard.writeText(deployedBoardAPI.deployedContractAddress);
+      const baseUrl = window.location.origin + window.location.pathname;
+      const urlWithContract = `${baseUrl}?contractAddress=${deployedBoardAPI.deployedContractAddress}`;
+      await navigator.clipboard.writeText(urlWithContract);
     }
   }, [deployedBoardAPI]);
 
@@ -161,9 +211,17 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
       subscription.unsubscribe();
     };
   }, [boardDeployment, setIsWorking, setErrorMessage, setDeployedBoardAPI]);
+  const contractAddress = useContractAddress();
+  useEffect(() => {
+    // If we have a contractAddress from URL but no active deployment, auto-join
+    if (contractAddress && !boardDeployment$ && !boardDeployment) {
+      console.log('Auto-joining contract:', contractAddress);
+      onJoinBoard(contractAddress);
+    }
+  }, [contractAddress, boardDeployment$, boardDeployment, onJoinBoard]);
 
   return (
-    <Card sx={{ position: 'relative', width: 275, height: 300, minWidth: 275, minHeight: 300 }} color="primary">
+    <Card sx={{ position: 'relative', width: 400, minWidth: 400, p: 2 }} color="primary">
       {!boardDeployment$ && (
         <EmptyCardContent onCreateBoardCallback={onCreateBoard} onJoinBoardCallback={onJoinBoard} />
       )}
@@ -201,7 +259,7 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
             title={toShortFormatContractAddress(deployedBoardAPI?.deployedContractAddress) ?? 'Loading...'}
             action={
               deployedBoardAPI?.deployedContractAddress ? (
-                <IconButton title="Copy contract address" onClick={onCopyContractAddress}>
+                <IconButton title="Copy share Link" onClick={onCopyContractAddress}>
                   <CopyIcon fontSize="small" />
                 </IconButton>
               ) : (
@@ -212,27 +270,67 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
           <CardContent>
             {boardState ? (
               boardState.state === State.OCCUPIED ? (
-                <Typography data-testid="board-posted-message" minHeight={160} color="primary">
-                  {boardState.message}
-                </Typography>
+                <>
+                  <Typography variant="h6" color="textSecondary" gutterBottom>
+                    Campaign Title
+                  </Typography>
+                  <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold" color="primary">
+                    {boardState.title}
+                  </Typography>
+
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
+                    Funding Goal
+                  </Typography>
+                  <Typography data-testid="board-campaign-goal" variant="body2" color="primary">
+                    {boardState.goal}
+                  </Typography>
+
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
+                    Campaign Message
+                  </Typography>
+                  <Typography data-testid="board-posted-message" minHeight={160} color="primary">
+                    {boardState.message}
+                  </Typography>
+                </>
               ) : (
-                <TextField
-                  id="message-prompt"
-                  data-testid="board-message-prompt"
-                  variant="outlined"
-                  focused
-                  fullWidth
-                  multiline
-                  minRows={6}
-                  maxRows={6}
-                  placeholder="Message to post"
-                  size="small"
-                  color="primary"
-                  inputProps={{ style: { color: 'black' } }}
-                  onChange={(e) => {
-                    setMessagePrompt(e.target.value);
-                  }}
-                />
+                <>
+                  <TextField
+                    id="title-prompt"
+                    label="Campaign Title"
+                    placeholder="Enter campaign title"
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                    value={titlePrompt ?? ''}
+                    onChange={(e) => setTitlePrompt(e.target.value)}
+                  />
+                  <TextField
+                    id="goal-prompt"
+                    placeholder="Enter funding goal amount"
+                    label="Funding Goal"
+                    type="number"
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                    value={goalPrompt ?? ''}
+                    onChange={(e) => setGoalPrompt(e.target.value)}
+                  />
+                  <TextField
+                    id="message-prompt"
+                    label="Campaign Message"
+                    placeholder="Enter campain message"
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    minRows={4}
+                    maxRows={6}
+                    size="small"
+                    value={messagePrompt ?? ''}
+                    onChange={(e) => setMessagePrompt(e.target.value)}
+                  />
+                </>
               )
             ) : (
               <Skeleton variant="rectangular" width={245} height={160} />
@@ -241,6 +339,14 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
           <CardActions>
             {deployedBoardAPI ? (
               <React.Fragment>
+                <IconButton
+                  title="Send tokens to the campaign"
+                  data-testid="board-send-tokens-btn"
+                  disabled={boardState?.state === State.OCCUPIED || !goalPrompt?.length}
+                  onClick={onSendToken}
+                >
+                  <SendTimeExtensionIcon />
+                </IconButton>
                 <IconButton
                   title="Post message"
                   data-testid="board-post-message-btn"

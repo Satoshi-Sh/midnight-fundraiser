@@ -116,6 +116,8 @@ export class BBoardAPI implements DeployedBBoardAPI {
           message: ledgerState.message.value,
           sequence: ledgerState.sequence,
           isOwner: toHex(ledgerState.owner) === toHex(hashedSecretKey),
+          title: ledgerState.title.value,
+          goal: ledgerState.goal,
         };
       },
     );
@@ -191,19 +193,23 @@ export class BBoardAPI implements DeployedBBoardAPI {
     logger?.info('deployContract');
 
     // EXERCISE 5: FILL IN THE CORRECT ARGUMENTS TO deployContract
-    const deployedBBoardContract = await deployContract<typeof bboardContractInstance>(providers, {
-      privateStateId: bboardPrivateStateKey,
-      contract: bboardContractInstance,
-      initialPrivateState: await BBoardAPI.getPrivateState(providers),
-    });
+    try {
+      const deployedBBoardContract = await deployContract<typeof bboardContractInstance>(providers, {
+        privateStateId: bboardPrivateStateKey,
+        contract: bboardContractInstance,
+        initialPrivateState: await BBoardAPI.getPrivateState(providers),
+      });
+      logger?.trace({
+        contractDeployed: {
+          finalizedDeployTxData: deployedBBoardContract.deployTxData.public,
+        },
+      });
 
-    logger?.trace({
-      contractDeployed: {
-        finalizedDeployTxData: deployedBBoardContract.deployTxData.public,
-      },
-    });
-
-    return new BBoardAPI(deployedBBoardContract, providers, logger);
+      return new BBoardAPI(deployedBBoardContract, providers, logger);
+    } catch (e) {
+      logger?.error(e);
+      throw e;
+    }
   }
 
   /**

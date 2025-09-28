@@ -94,6 +94,8 @@ export type BBoardDerivedState = {
    * `owner` corresponds to the public key derived from `secretKey`, then `isOwner` is `true`.
    */
   readonly isOwner: boolean;
+  readonly title: string | undefined;
+  readonly goal: bigint | undefined;
 };
 
 // TODO: for some reason I needed to include "@midnight-ntwrk/wallet-sdk-address-format": "1.0.0-rc.1", should we bump in to rc-2 ?
