@@ -31,6 +31,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import WriteIcon from '@mui/icons-material/EditNoteOutlined';
+import SendTimeExtensionIcon from '@mui/icons-material/SendTimeExtensionOutlined';
 import CopyIcon from '@mui/icons-material/ContentPasteOutlined';
 import StopIcon from '@mui/icons-material/HighlightOffOutlined';
 import { type BBoardDerivedState, type DeployedBBoardAPI } from '../../../api/src/index';
@@ -39,6 +40,8 @@ import { type BoardDeployment } from '../contexts';
 import { type Observable } from 'rxjs';
 import { State } from '../../../contract/src/index';
 import { EmptyCardContent } from './Board.EmptyCardContent';
+import { WalletBuilder } from '@midnight-ntwrk/wallet';
+import { NetworkId } from '@midnight-ntwrk/zswap';
 
 /** The props required by the {@link Board} component. */
 export interface BoardProps {
@@ -115,6 +118,29 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
 
         setIsWorking(true);
         await deployedBoardAPI.post(titlePrompt, messagePrompt, BigInt(goalInput), walletAddress);
+      }
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsWorking(false);
+    }
+  }, [deployedBoardAPI, setErrorMessage, setIsWorking, messagePrompt]);
+
+  const onSendToken = useCallback(async () => {
+    try {
+      if (deployedBoardAPI) {
+        const wallet = await WalletBuilder.build(
+          'https://indexer.testnet-02.midnight.network/api/v1/graphql',
+          'wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws',
+          'http://localhost:6300',
+          'https://rpc.testnet-02.midnight.network',
+          '0000000000000000000000000000000000000000000000000000000000000000',
+          NetworkId.TestNet,
+        );
+
+        wallet.start();
+
+        await deployedBoardAPI.contributeWithWallet(wallet, BigInt(1));
       }
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
@@ -315,6 +341,14 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
           <CardActions>
             {deployedBoardAPI ? (
               <React.Fragment>
+                <IconButton
+                  title="Send tokens to the campaign"
+                  data-testid="board-send-tokens-btn"
+                  disabled={boardState?.state === State.OCCUPIED || !goalPrompt?.length}
+                  onClick={onSendToken}
+                >
+                  <SendTimeExtensionIcon />
+                </IconButton>
                 <IconButton
                   title="Post message"
                   data-testid="board-post-message-btn"
