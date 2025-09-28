@@ -127,26 +127,24 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
   }, [deployedBoardAPI, setErrorMessage, setIsWorking, messagePrompt]);
 
   const onSendToken = useCallback(async () => {
-    try {
-      if (deployedBoardAPI) {
-        const wallet = await WalletBuilder.build(
-          'https://indexer.testnet-02.midnight.network/api/v1/graphql',
-          'wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws',
-          'http://localhost:6300',
-          'https://rpc.testnet-02.midnight.network',
-          '0000000000000000000000000000000000000000000000000000000000000000',
-          NetworkId.TestNet,
-        );
-
-        wallet.start();
-
-        await deployedBoardAPI.contributeWithWallet(wallet, BigInt(1));
-      }
-    } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsWorking(false);
-    }
+    // try {
+    //   if (deployedBoardAPI) {
+    //     const wallet = await WalletBuilder.build(
+    //       'https://indexer.testnet-02.midnight.network/api/v1/graphql',
+    //       'wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws',
+    //       'http://localhost:6300',
+    //       'https://rpc.testnet-02.midnight.network',
+    //       '0000000000000000000000000000000000000000000000000000000000000000',
+    //       NetworkId.TestNet,
+    //     );
+    //     wallet.start();
+    //     await deployedBoardAPI.contributeWithWallet(wallet, BigInt(1));
+    //   }
+    // } catch (error: unknown) {
+    //   setErrorMessage(error instanceof Error ? error.message : String(error));
+    // } finally {
+    //   setIsWorking(false);
+    // }
   }, [deployedBoardAPI, setErrorMessage, setIsWorking, messagePrompt]);
 
   // Callback to handle the taking down of a message. Again, we simply invoke the `takeDown` method
