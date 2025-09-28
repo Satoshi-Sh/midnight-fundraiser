@@ -226,21 +226,21 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
             {boardState ? (
               boardState.state === State.OCCUPIED ? (
                 <>
-                  <Typography variant="h6" color="textPrimary" gutterBottom>
+                  <Typography variant="h6" color="textSecondary" gutterBottom>
                     Campaign Title
                   </Typography>
-                  <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold">
+                  <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold" color="primary">
                     {boardState.title}
                   </Typography>
 
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
                     Funding Goal
                   </Typography>
-                  <Typography data-testid="board-campaign-goal" variant="body2" color="textSecondary">
-                    Goal: {boardState.goal}
+                  <Typography data-testid="board-campaign-goal" variant="body2" color="primary">
+                    boardState.goal
                   </Typography>
 
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
                     Campaign Message
                   </Typography>
                   <Typography data-testid="board-posted-message" minHeight={160} color="primary">
