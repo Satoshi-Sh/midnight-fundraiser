@@ -40,6 +40,7 @@ import { type Observable } from 'rxjs';
 import { State } from '../../../contract/src/index';
 import { EmptyCardContent } from './Board.EmptyCardContent';
 
+
 /** The props required by the {@link Board} component. */
 export interface BoardProps {
   /** The observable bulletin board deployment. */
@@ -81,6 +82,7 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
     [boardApiProvider],
   );
 
+
   // Callback to handle the posting of a message. The message text is captured in the `messagePrompt`
   // state, and we just need to forward it to the `post` method of the `DeployedBBoardAPI` instance
   // that we received in the `deployedBoardAPI` state.
@@ -97,12 +99,18 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
     }
     try {
       if (deployedBoardAPI) {
+
+          const walletState = await boardApiProvider.getWalletAddress()
+          const walletAddress = walletState.address
+
+          console.log("get wallet address", walletState, walletAddress)
+
         setIsWorking(true);
         await deployedBoardAPI.post(
           titlePrompt,
           messagePrompt,
           BigInt(goalInput),
-          'mn_shield-addr_test1arezwcd4dpx77vdgvrvlf9t8fjtxmhh46928slvqjsrp4caq6yfsxqxv2ux0w0lmj7u7f5asu2aytre9cp8l68597ewr0suaf6eyl9rn5vea0gcf',
+          walletAddress
         );
       }
     } catch (error: unknown) {

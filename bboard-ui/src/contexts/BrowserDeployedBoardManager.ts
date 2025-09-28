@@ -38,9 +38,9 @@ import {
 import { pipe as fnPipe } from 'fp-ts/function';
 import { type Logger } from 'pino';
 import {
-  type DAppConnectorAPI,
-  type DAppConnectorWalletAPI,
-  type ServiceUriConfig,
+    type DAppConnectorAPI,
+    type DAppConnectorWalletAPI, DAppConnectorWalletState,
+    type ServiceUriConfig,
 } from '@midnight-ntwrk/dapp-connector-api';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 // import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
@@ -118,6 +118,7 @@ export interface DeployedBoardAPIProvider {
    * contract; otherwise it will attempt to deploy a new one.
    */
   readonly resolve: (contractAddress?: ContractAddress) => Observable<BoardDeployment>;
+  readonly getWalletAddress: () => Promise<DAppConnectorWalletState>;
 }
 
 /**
@@ -169,6 +170,13 @@ export class BrowserDeployedBoardManager implements DeployedBoardAPIProvider {
     this.#boardDeploymentsSubject.next([...deployments, deployment]);
 
     return deployment;
+  }
+
+  async getWalletAddress() {
+      const { wallet } = await connectToWallet(this.logger);
+    const walletState = await wallet.state();
+
+    return walletState
   }
 
   private getProviders(): Promise<BBoardProviders> {
@@ -254,6 +262,7 @@ const initializeProviders = async (logger: Logger): Promise<BBoardProviders> => 
     },
   };
 };
+
 
 /** @internal */
 const connectToWallet = (logger: Logger): Promise<{ wallet: DAppConnectorWalletAPI; uris: ServiceUriConfig }> => {
