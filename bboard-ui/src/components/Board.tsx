@@ -226,11 +226,22 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
             {boardState ? (
               boardState.state === State.OCCUPIED ? (
                 <>
+                  <Typography variant="h6" color="textPrimary" gutterBottom>
+                    Campaign Title
+                  </Typography>
                   <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold">
                     {boardState.title}
                   </Typography>
+
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Funding Goal
+                  </Typography>
                   <Typography data-testid="board-campaign-goal" variant="body2" color="textSecondary">
                     Goal: {boardState.goal}
+                  </Typography>
+
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Campaign Message
                   </Typography>
                   <Typography data-testid="board-posted-message" minHeight={160} color="primary">
                     {boardState.message}
@@ -238,44 +249,26 @@ export const Board: React.FC<Readonly<BoardProps>> = ({ boardDeployment$ }) => {
                 </>
               ) : (
                 <>
-                  <TextField
-                    id="title-prompt"
-                    label="Campaign Title"
-                    placeholder="Enter campaign title"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    sx={{ mb: 1 }}
-                    value={titlePrompt ?? ''}
-                    onChange={(e) => setTitlePrompt(e.target.value)}
-                  />
+                  <Typography variant="h6" color="textSecondary" gutterBottom>
+                    Campaign Title
+                  </Typography>
+                  <Typography data-testid="board-campaign-title" variant="subtitle1" fontWeight="bold" color="primary">
+                    {boardState.title}
+                  </Typography>
 
-                  <TextField
-                    id="goal-prompt"
-                    placeholder="Enter funding goal amount"
-                    label="Funding Goal"
-                    type="number"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    sx={{ mb: 1 }}
-                    value={goalPrompt ?? ''}
-                    onChange={(e) => setGoalPrompt(e.target.value)}
-                  />
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
+                    Funding Goal
+                  </Typography>
+                  <Typography data-testid="board-campaign-goal" variant="body2" color="primary">
+                    {boardState.goal}
+                  </Typography>
 
-                  <TextField
-                    id="message-prompt"
-                    label="Campaign Message"
-                    placeholder="Enter campain message"
-                    variant="outlined"
-                    fullWidth
-                    multiline
-                    minRows={4}
-                    maxRows={6}
-                    size="small"
-                    value={messagePrompt ?? ''}
-                    onChange={(e) => setMessagePrompt(e.target.value)}
-                  />
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }} color="textSecondary">
+                    Campaign Message
+                  </Typography>
+                  <Typography data-testid="board-posted-message" minHeight={160} color="primary">
+                    {boardState.message}
+                  </Typography>
                 </>
               )
             ) : (
